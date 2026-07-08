@@ -82,6 +82,53 @@ const openLink: Platform["openLink"] = (url) => {
   window.open(url, "_blank")
 }
 
+const previewLink: Platform["previewLink"] = (url) => {
+  const overlay = document.createElement("div")
+  overlay.style.cssText =
+    "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:24px"
+  const box = document.createElement("div")
+  box.style.cssText =
+    "width:100%;max-width:900px;height:80vh;background:#fff;border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3)"
+  const header = document.createElement("div")
+  header.style.cssText =
+    "display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #e5e5e5;flex-shrink:0"
+  const urlSpan = document.createElement("span")
+  urlSpan.textContent = url
+  urlSpan.style.cssText = "flex:1;font-size:13px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+  const openBtn = document.createElement("a")
+  openBtn.textContent = "Open in new tab"
+  openBtn.href = url
+  openBtn.target = "_blank"
+  openBtn.rel = "noopener noreferrer"
+  openBtn.style.cssText = "font-size:13px;color:#3b82f6;text-decoration:none;flex-shrink:0"
+  const closeBtn = document.createElement("button")
+  closeBtn.textContent = "\u00d7"
+  closeBtn.style.cssText =
+    "width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;font-size:18px;cursor:pointer;color:#666;flex-shrink:0"
+  closeBtn.onclick = () => overlay.remove()
+  header.appendChild(urlSpan)
+  header.appendChild(openBtn)
+  header.appendChild(closeBtn)
+  const iframe = document.createElement("iframe")
+  iframe.src = url
+  iframe.style.cssText = "flex:1;border:none"
+  iframe.sandbox = "allow-same-origin allow-scripts"
+  iframe.onerror = () => {
+    iframe.remove()
+    const msg = document.createElement("div")
+    msg.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;color:#666"
+    msg.textContent = "This site does not allow being embedded."
+    box.appendChild(msg)
+  }
+  box.appendChild(header)
+  box.appendChild(iframe)
+  overlay.appendChild(box)
+  overlay.onclick = (e) => {
+    if (e.target === overlay) overlay.remove()
+  }
+  document.body.appendChild(overlay)
+}
+
 const back: Platform["back"] = () => {
   window.history.back()
 }
@@ -123,6 +170,7 @@ const platform: Platform = {
   platform: "web",
   version: pkg.version,
   openLink,
+  previewLink,
   back,
   forward,
   restart,
@@ -133,6 +181,10 @@ const platform: Platform = {
   },
   setDefaultServer: writeDefaultServerUrl,
 }
+
+document.addEventListener("link-preview", ((e: CustomEvent<{ url: string }>) => {
+  previewLink(e.detail.url)
+}) as EventListener)
 
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({

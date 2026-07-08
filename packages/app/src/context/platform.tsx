@@ -34,6 +34,9 @@ type PlatformBase = {
   /** Open a URL in the default browser */
   openLink(url: string): void
 
+  /** Open a URL in an in-app preview dialog */
+  previewLink?(url: string): void
+
   /** Open a local path in a local app (desktop only) */
   openPath?(path: string, app?: string): Promise<void>
 

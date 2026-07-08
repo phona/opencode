@@ -496,6 +496,13 @@ async function highlightCodeBlocks(html: string): Promise<string> {
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
 
+    if (lang === "mermaid") {
+      const encoded = encodeURIComponent(code)
+      const placeholder = `<div data-component="mermaid-diagram" data-mermaid-content="${encoded}"></div>`
+      result = result.replace(fullMatch, () => placeholder)
+      continue
+    }
+
     let language = lang || "text"
     if (!(language in bundledLanguages)) {
       language = "text"
@@ -532,6 +539,10 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
       katexExtension,
       markedShiki({
         async highlight(code, lang) {
+          if (lang === "mermaid") {
+            const encoded = encodeURIComponent(code)
+            return `<div data-component="mermaid-diagram" data-mermaid-content="${encoded}"></div>`
+          }
           const highlighter = await getSharedHighlighter({
             themes: ["OpenCode"],
             langs: [],

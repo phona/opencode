@@ -143,7 +143,10 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
   let started = false
   let generation = 0
   const HEARTBEAT_TIMEOUT_MS = 15_000
+  const RECONNECT_DEBOUNCE_MS = 1_000
   let lastEventAt = Date.now()
+  let lastReconnect = 0
+  let hidden = false
   let heartbeat: ReturnType<typeof setTimeout> | undefined
   const resetHeartbeat = () => {
     lastEventAt = Date.now()
@@ -156,6 +159,14 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
     if (!heartbeat) return
     clearTimeout(heartbeat)
     heartbeat = undefined
+  }
+  const forceReconnect = () => {
+    if (!started) return
+    if (!attempt) return
+    const now = Date.now()
+    if (now - lastReconnect < RECONNECT_DEBOUNCE_MS) return
+    lastReconnect = now
+    attempt.abort()
   }
 
   const start = () => {
@@ -238,12 +249,24 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
 
   onMount(() => {
     makeEventListener(window, "pagehide", stop)
-    makeEventListener(window, "pageshow", (event) => resumeStreamAfterPageShow(event, start))
+    makeEventListener(window, "pageshow", (event) => {
+      if (event.persisted) {
+        start()
+        return
+      }
+      forceReconnect()
+    })
     makeEventListener(document, "visibilitychange", () => {
-      if (document.visibilityState !== "visible") return
-      if (!started) return
-      if (Date.now() - lastEventAt < HEARTBEAT_TIMEOUT_MS) return
-      attempt?.abort()
+      if (document.visibilityState === "hidden") {
+        hidden = true
+        return
+      }
+      if (!hidden) return
+      hidden = false
+      forceReconnect()
+    })
+    makeEventListener(window, "online", () => {
+      forceReconnect()
     })
   })
 
