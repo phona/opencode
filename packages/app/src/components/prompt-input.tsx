@@ -1270,6 +1270,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   const touch = createMediaQuery("(hover: none)")
+  const mobile = createMediaQuery("(max-width: 767px)")
 
   const { abort, handleSubmit } =
     props.submission ??
@@ -1510,7 +1511,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     restoreEndOnFocus = true
     props.ref?.(el)
   }
-  const showAgentControl = createMemo(() => props.controls.agents.visible && props.controls.agents.options.length > 0)
+  const showAgentControl = createMemo(() => !mobile() && props.controls.agents.visible && props.controls.agents.options.length > 0)
   const agentControlState = createMemo<ComposerAgentControlState>(() => ({
     title: language.t("command.agent.cycle"),
     keybind: command.keybindParts("agent.cycle"),
