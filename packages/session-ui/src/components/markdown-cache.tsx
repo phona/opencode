@@ -16,7 +16,10 @@ const config = {
   FORBID_TAGS: ["style"],
   FORBID_CONTENTS: ["style", "script"],
   ADD_TAGS: ["svg", "path"],
-  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns", "target"],
+  ADD_ATTR: [
+    "d", "viewBox", "preserveAspectRatio", "xmlns", "target",
+    "data-component", "data-mermaid-content", "data-mermaid-rendered", "data-mermaid-error",
+  ],
 }
 
 if (typeof window !== "undefined" && DOMPurify.isSupported) {

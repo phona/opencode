@@ -1,0 +1,192 @@
+[data-component="mermaid-diagram"] {
+  position: relative;
+  border-radius: var(--v2-radius-md, 6px);
+  border: 1px solid var(--v2-border-border-base);
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  background: var(--v2-background-bg-base);
+}
+
+.mermaid-viewport {
+  position: relative;
+  overflow: hidden;
+  min-height: 80px;
+  cursor: grab;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.mermaid-transform {
+  transform-origin: center center;
+  will-change: transform;
+  transition: transform 150ms ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mermaid-transform svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--v2-radius-md, 6px);
+  background: color-mix(in srgb, var(--v2-background-bg-base) 80%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--v2-border-border-base);
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+[data-component="mermaid-diagram"]:hover .mermaid-controls {
+  opacity: 1;
+}
+
+.mermaid-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: var(--v2-radius-sm, 4px);
+  background: transparent;
+  color: var(--v2-text-text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mermaid-control-btn:hover {
+  background: var(--v2-background-bg-layer-01);
+  color: var(--v2-text-text-base);
+}
+
+.mermaid-control-btn:active {
+  background: var(--v2-background-bg-layer-02);
+}
+
+.mermaid-control-btn[data-copied="true"] {
+  color: var(--v2-text-text-code-accent);
+}
+
+.mermaid-control-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mermaid-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: var(--v2-border-border-muted);
+}
+
+.mermaid-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--v2-background-bg-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mermaid-fullscreen-viewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mermaid-fullscreen-viewport .mermaid-transform svg {
+  max-width: none;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+}
+
+.mermaid-fullscreen-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--v2-border-border-base);
+  border-radius: var(--v2-radius-md, 6px);
+  background: color-mix(in srgb, var(--v2-background-bg-base) 80%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--v2-text-text-base);
+  cursor: pointer;
+  z-index: 10;
+}
+
+.mermaid-fullscreen-close:hover {
+  background: var(--v2-background-bg-layer-01);
+}
+
+.mermaid-fullscreen-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mermaid-fullscreen-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--v2-radius-md, 6px);
+  background: color-mix(in srgb, var(--v2-background-bg-base) 80%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--v2-border-border-base);
+  z-index: 10;
+}
+
+[data-component="mermaid-diagram"][data-mermaid-error] {
+  border-color: var(--v2-text-text-code-accent);
+}
+
+.mermaid-error-bar {
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--v2-text-text-code-accent) 10%, transparent);
+  color: var(--v2-text-text-code-accent);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-small, 13px);
+  border-bottom: 1px solid color-mix(in srgb, var(--v2-text-text-code-accent) 30%, transparent);
+}
+
+[data-component="mermaid-diagram"][data-mermaid-error] pre {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+}

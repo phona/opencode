@@ -31,6 +31,7 @@ import { markdownBlockKey, type MarkdownToken } from "./markdown-worker-protocol
 import { shouldResetCodeTokens, type RenderedCodeState } from "./markdown-code-state"
 import { getCachedMarkdown, sanitizeMarkdown, touchCachedMarkdown, type MarkdownCacheEntry } from "./markdown-cache"
 import { inlineCodeKind } from "./markdown-inline-code-kind"
+import { renderMermaidDiagrams } from "./mermaid"
 
 type RenderedBlock =
   | (MarkdownCacheEntry & { key: string; mode: Exclude<Block["mode"], "code"> })
@@ -273,6 +274,7 @@ function markInlineCode(root: HTMLDivElement) {
 function decorate(root: HTMLDivElement, labels: CopyLabels) {
   const blocks = Array.from(root.querySelectorAll("pre"))
   for (const block of blocks) {
+    if (block.closest('[data-component="mermaid-diagram"]')) continue
     ensureCodeWrapper(block, labels)
   }
   if (!document.body.hasAttribute("data-new-layout")) return
@@ -454,6 +456,25 @@ export function Markdown(
   )
 
   let copyCleanup: (() => void) | undefined
+  let linkCleanup: (() => void) | undefined
+
+  createEffect(() => {
+    const container = root()
+    if (!container || linkCleanup) return
+    const handler = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement)?.closest?.("a.external-link")
+      if (!link) return
+      const href = link.getAttribute("href")
+      if (!href) return
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return
+      e.preventDefault()
+      document.dispatchEvent(
+        new CustomEvent("link-preview", { detail: { url: href }, bubbles: false }),
+      )
+    }
+    container.addEventListener("click", handler)
+    linkCleanup = () => container.removeEventListener("click", handler)
+  })
 
   createEffect(() => {
     const container = root()
@@ -493,10 +514,12 @@ export function Markdown(
         copy: i18n.t("ui.message.copy"),
         copied: i18n.t("ui.message.copied"),
       }))
+    renderMermaidDiagrams(container)
   })
 
   onCleanup(() => {
     if (copyCleanup) copyCleanup()
+    if (linkCleanup) linkCleanup()
     activeCodeKeys.forEach(disposeCode)
     completedCode.clear()
   })
@@ -575,6 +598,13 @@ function updateBlock(container: HTMLDivElement, index: number, block: RenderedBl
 
   morphdom(current, next, {
     onBeforeElUpdated: (fromEl, toEl) => {
+      if (
+        fromEl instanceof HTMLElement &&
+        fromEl.getAttribute("data-component") === "mermaid-diagram" &&
+        fromEl.getAttribute("data-mermaid-rendered")
+      ) {
+        return false
+      }
       if (
         fromEl instanceof HTMLElement &&
         toEl instanceof HTMLElement &&
