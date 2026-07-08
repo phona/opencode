@@ -1,5 +1,6 @@
 import { useMarked } from "@opencode-ai/ui/context/marked"
 import { useI18n } from "@opencode-ai/ui/context/i18n"
+import { copy } from "@opencode-ai/ui/clipboard"
 import morphdom from "morphdom"
 import { checksum } from "@opencode-ai/core/util/encode"
 import {
@@ -300,10 +301,8 @@ function setupCodeCopy(root: HTMLDivElement, getLabels: () => CopyLabels) {
     const code = button.closest('[data-component="markdown-code"]')?.querySelector("code")
     const content = code?.textContent ?? ""
     if (!content) return
-    const clipboard = navigator?.clipboard
-    if (!clipboard) return
-    await clipboard.writeText(content)
     const labels = getLabels()
+    await copy(content)
     setCopyState(button, labels, true)
     const existing = timeouts.get(button)
     if (existing) clearTimeout(existing)

@@ -496,7 +496,6 @@ export default function Page() {
   const lastUserMessage = timeline.lastUserMessage
   const messages = timeline.messages
   const messagesReady = timeline.ready
-  const sessionSync = timeline.resource
   const userMessages = timeline.userMessages
   const visibleUserMessages = timeline.visibleUserMessages
 
@@ -534,7 +533,6 @@ export default function Page() {
   const [store, setStore] = createStore({
     ...sessionViewState(),
     newSessionWorktree: "main",
-    deferRender: false,
   })
 
   const [followup, setFollowup] = persisted(
@@ -551,18 +549,6 @@ export default function Page() {
       edit: {},
     }),
   )
-
-  createComputed((prev) => {
-    const key = sessionKey()
-    if (key !== prev) {
-      setStore("deferRender", true)
-      const owner = sessionOwnership.capture()
-      requestAnimationFrame(() => {
-        setTimeout(() => owner.run(() => setStore("deferRender", false)), 0)
-      })
-    }
-    return key
-  })
 
   let reviewFrame: number | undefined
   let todoFrame: number | undefined
@@ -1134,30 +1120,28 @@ export default function Page() {
     loadingClass: string
     emptyClass: string
   }) => (
-    <Show when={!store.deferRender}>
-      <SessionReviewTab
-        title={changesTitle()}
-        empty={reviewEmpty(input)}
-        diffs={reviewDiffs}
-        view={view}
-        diffStyle={input.diffStyle}
-        onDiffStyleChange={input.onDiffStyleChange}
-        onScrollRef={(el) => setTree("reviewScroll", el)}
-        focusedFile={tree.activeDiff}
-        onLineComment={(comment) => addCommentToContext({ ...comment, origin: "review" })}
-        onLineCommentUpdate={updateCommentInContext}
-        onLineCommentDelete={removeCommentFromContext}
-        lineCommentActions={reviewCommentActions()}
-        commentMentions={{
-          items: file.searchFilesAndDirectories,
-        }}
-        comments={comments.all()}
-        focusedComment={comments.focus()}
-        onFocusedCommentChange={comments.setFocus}
-        onViewFile={openReviewFile}
-        classes={input.classes}
-      />
-    </Show>
+    <SessionReviewTab
+      title={changesTitle()}
+      empty={reviewEmpty(input)}
+      diffs={reviewDiffs}
+      view={view}
+      diffStyle={input.diffStyle}
+      onDiffStyleChange={input.onDiffStyleChange}
+      onScrollRef={(el) => setTree("reviewScroll", el)}
+      focusedFile={tree.activeDiff}
+      onLineComment={(comment) => addCommentToContext({ ...comment, origin: "review" })}
+      onLineCommentUpdate={updateCommentInContext}
+      onLineCommentDelete={removeCommentFromContext}
+      lineCommentActions={reviewCommentActions()}
+      commentMentions={{
+        items: file.searchFilesAndDirectories,
+      }}
+      comments={comments.all()}
+      focusedComment={comments.focus()}
+      onFocusedCommentChange={comments.setFocus}
+      onViewFile={openReviewFile}
+      classes={input.classes}
+    />
   )
 
   const reviewV2State = createReviewPanelV2State()
@@ -1210,13 +1194,9 @@ export default function Page() {
   // Latch: defer only the first diff render off the mount critical path. This Page
   // stays mounted across same-workspace session tab switches, so gating on every
   // deferRender flip tore down and remounted the whole review pane on tab switch.
-  const reviewPanelV2Rendered = createMemo<boolean>((prev) => prev || !store.deferRender, false)
-
   const reviewPanelV2 = () => (
     <div class="flex flex-col h-full overflow-hidden bg-background-stronger contain-strict">
-      <Show when={reviewPanelV2Rendered()}>
-        <ReviewPanelV2 {...reviewPanelV2Props()} />
-      </Show>
+      <ReviewPanelV2 {...reviewPanelV2Props()} />
     </div>
   )
 
@@ -1898,7 +1878,7 @@ export default function Page() {
       sessionKey,
       sessionID: () => params.id,
       prompt,
-      ready: () => !store.deferRender && messagesReady(),
+      ready: () => messagesReady(),
       centered,
       todo: {
         collapsed: () => view().todoCollapsed.get(),
@@ -2015,7 +1995,6 @@ export default function Page() {
 
   const sessionPanelContent = () => (
     <>
-      {sessionSync() ?? ""}
       <Show when={!isDesktop() && !!params.id && settings.general.newLayoutDesigns() && !mobileTabsBottom()}>
         {mobileTabs(true)}
       </Show>
