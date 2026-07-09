@@ -2067,6 +2067,20 @@ export default function Page() {
     </>
   )
 
+  const hasQuestions = createMemo(() => visibleUserMessages().length > 0)
+
+  const onSelectQuestion = (messageID: string) => {
+    const message = visibleUserMessages().find((m) => m.id === messageID)
+    if (!message) return
+
+    if (!isDesktop() && store.mobileTab !== "session") {
+      setStore("mobileTab", "session")
+    }
+
+    setActiveMessage(message)
+    scrollToMessage(message)
+  }
+
   return (
     <SessionRouteFrame>
       <SessionHeader />
@@ -2135,6 +2149,11 @@ export default function Page() {
             focusReviewDiff={focusReviewDiff}
             reviewSnap={ui.reviewSnap}
             size={size}
+            userMessages={visibleUserMessages}
+            activeMessageID={() => store.messageId}
+            questionsLoading={historyLoading}
+            onSelectQuestion={onSelectQuestion}
+            hasQuestions={hasQuestions}
           />
         </Show>
         <Show when={newSessionDesign()}>
@@ -2161,6 +2180,11 @@ export default function Page() {
                     reviewSnap={ui.reviewSnap}
                     size={size}
                     stacked={desktopV2PanelLayout().stacked}
+                    userMessages={visibleUserMessages}
+                    activeMessageID={() => store.messageId}
+                    questionsLoading={historyLoading}
+                    onSelectQuestion={onSelectQuestion}
+                    hasQuestions={hasQuestions}
                   />
                 </div>
               </Show>
