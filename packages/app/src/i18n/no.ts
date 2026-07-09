@@ -1045,6 +1045,10 @@ export const dict = {
   "home.sessions.group.older": "Eldre",
 
   "session.tab.unknown": "Ukjent sesjon",
+  "session.tab.questions": "Questions",
+  "session.questions.search": "Search questions...",
+  "session.questions.empty": "No questions yet",
+  "session.questions.noResults": "No questions match your search",
   "session.error.notFound": "Denne sesjonen finnes ikke",
   "session.error.notFound.description": "Denne fanen peker til en sesjon som ikke lenger finnes på denne serveren.",
   "session.error.notFound.closeTab": "Lukk fane",

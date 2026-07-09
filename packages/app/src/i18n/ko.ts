@@ -952,6 +952,10 @@ export const dict = {
   "home.sessions.group.older": "이전",
 
   "session.tab.unknown": "알 수 없는 세션",
+  "session.tab.questions": "Questions",
+  "session.questions.search": "Search questions...",
+  "session.questions.empty": "No questions yet",
+  "session.questions.noResults": "No questions match your search",
   "session.error.notFound": "이 세션을 찾을 수 없습니다",
   "session.error.notFound.description": "이 탭은 이 서버에 더 이상 존재하지 않는 세션을 가리킵니다.",
   "session.error.notFound.closeTab": "탭 닫기",

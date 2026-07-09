@@ -564,6 +564,10 @@ export const dict = {
   "session.tab.review": "Überprüfung",
   "session.tab.context": "Kontext",
   "session.tab.unknown": "Unbekannte Sitzung",
+  "session.tab.questions": "Questions",
+  "session.questions.search": "Search questions...",
+  "session.questions.empty": "No questions yet",
+  "session.questions.noResults": "No questions match your search",
   "session.panel.reviewAndFiles": "Überprüfung und Dateien",
   "session.error.notFound": "Diese Sitzung wurde nicht gefunden",
   "session.error.notFound.description":
