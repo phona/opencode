@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { createMemo, createRoot } from "solid-js"
+import { createMemo, createRoot, createSignal } from "solid-js"
 import { createStore } from "solid-js/store"
 import {
   createOpenReviewFile,
@@ -164,5 +164,35 @@ describe("createSessionTabs", () => {
       expect(result.closableTab()).toBeUndefined()
       dispose()
     })
+  })
+})
+
+test("questions tab is active when requested and available", () => {
+  createRoot((dispose) => {
+    const [tabs] = createSignal({ active: () => "questions", all: () => [] as string[] })
+    const state = createSessionTabs({
+      tabs,
+      pathFromTab: () => undefined,
+      normalizeTab: (tab) => tab,
+      questions: () => true,
+      hasQuestions: () => true,
+    })
+    expect(state.activeTab()).toBe("questions")
+    dispose()
+  })
+})
+
+test("questions tab is not active when questions are unavailable", () => {
+  createRoot((dispose) => {
+    const [tabs] = createSignal({ active: () => "questions", all: () => [] as string[] })
+    const state = createSessionTabs({
+      tabs,
+      pathFromTab: () => undefined,
+      normalizeTab: (tab) => tab,
+      questions: () => true,
+      hasQuestions: () => false,
+    })
+    expect(state.activeTab()).toBe("empty")
+    dispose()
   })
 })
