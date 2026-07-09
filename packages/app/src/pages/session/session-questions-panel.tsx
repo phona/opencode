@@ -23,7 +23,7 @@ export function SessionQuestionsPanel(props: SessionQuestionsPanelProps) {
   )
 
   const empty = createMemo(() => props.userMessages().length === 0 && !props.loading())
-  const noResults = createMemo(() => filtered().length === 0 && query().trim().length > 0)
+  const noResults = createMemo(() => filtered().length === 0 && query().trim().length > 0 && !props.loading())
 
   return (
     <div class="flex flex-col h-full overflow-hidden">
