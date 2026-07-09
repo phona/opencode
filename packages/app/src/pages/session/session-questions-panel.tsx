@@ -23,7 +23,9 @@ export function SessionQuestionsPanel(props: SessionQuestionsPanelProps) {
   )
 
   const empty = createMemo(() => props.userMessages().length === 0 && !props.loading())
-  const noResults = createMemo(() => filtered().length === 0 && query().trim().length > 0 && !props.loading())
+  const noResults = createMemo(() =>
+    filtered().length === 0 && query().trim().length > 0 && !props.loading() && !empty(),
+  )
 
   return (
     <div class="flex flex-col h-full overflow-hidden">
@@ -34,6 +36,7 @@ export function SessionQuestionsPanel(props: SessionQuestionsPanelProps) {
             value={query()}
             onInput={(e) => setQuery(e.currentTarget.value)}
             placeholder={language.t("session.questions.search")}
+            disabled={empty()}
             class="w-full bg-background-stronger text-13-regular text-text placeholder:text-text-weaker rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
