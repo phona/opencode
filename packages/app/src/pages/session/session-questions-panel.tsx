@@ -2,7 +2,7 @@ import { For, Show, createMemo, createSignal, type Accessor } from "solid-js"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 import { useLanguage } from "@/context/language"
 import { useSync } from "@/context/sync"
-import { filterQuestions, questionSummary } from "./session-questions-panel"
+import { filterQuestions, questionSummary } from "./session-questions-utils"
 
 export interface SessionQuestionsPanelProps {
   userMessages: Accessor<UserMessage[]>

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { Part, UserMessage } from "@opencode-ai/sdk/v2"
-import { filterQuestions, questionSummary } from "./session-questions-panel"
+import { filterQuestions, questionSummary } from "./session-questions-utils"
 
 const userMessage = (id: string, summary?: { title?: string; body?: string }): UserMessage =>
   ({

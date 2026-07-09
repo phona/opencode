@@ -26,7 +26,7 @@ import { useSettings } from "@/context/settings"
 import { useSync } from "@/context/sync"
 import { createFileTabListSync } from "@/pages/session/file-tab-scroll"
 import { FileTabContent } from "@/pages/session/file-tabs"
-import { SessionQuestionsPanel } from "@/pages/session/session-questions-panel.tsx"
+import { SessionQuestionsPanel } from "@/pages/session/session-questions-panel"
 import {
   createOpenSessionFileTab,
   createSessionTabs,
