@@ -8,7 +8,7 @@ import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { Mark } from "@opencode-ai/ui/logo"
 import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
-import type { SnapshotFileDiff, VcsFileDiff } from "@opencode-ai/sdk/v2"
+import type { SnapshotFileDiff, UserMessage, VcsFileDiff } from "@opencode-ai/sdk/v2"
 import { ConstrainDragYAxis, getDraggableId } from "@/utils/solid-dnd"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 
@@ -26,6 +26,7 @@ import { useSettings } from "@/context/settings"
 import { useSync } from "@/context/sync"
 import { createFileTabListSync } from "@/pages/session/file-tab-scroll"
 import { FileTabContent } from "@/pages/session/file-tabs"
+import { SessionQuestionsPanel } from "@/pages/session/session-questions-panel.tsx"
 import {
   createOpenSessionFileTab,
   createSessionTabs,
@@ -56,6 +57,11 @@ export function SessionSidePanel(props: {
   reviewSnap: boolean
   size: Sizing
   stacked?: boolean
+  userMessages: () => UserMessage[]
+  activeMessageID: () => string | undefined
+  questionsLoading: () => boolean
+  onSelectQuestion: (messageID: string) => void
+  hasQuestions: () => boolean
 }) {
   const layout = useLayout()
   const settings = useSettings()
@@ -155,6 +161,8 @@ export function SessionSidePanel(props: {
     normalizeTab,
     review: reviewTab,
     hasReview: props.canReview,
+    questions: () => props.hasQuestions(),
+    hasQuestions: () => props.hasQuestions(),
   })
   const contextOpen = tabState.contextOpen
   const openedTabs = tabState.openedTabs
@@ -315,6 +323,11 @@ export function SessionSidePanel(props: {
                             </div>
                           </Tabs.Trigger>
                         </Show>
+                        <Show when={props.hasQuestions()}>
+                          <Tabs.Trigger value="questions">
+                            {language.t("session.tab.questions")}
+                          </Tabs.Trigger>
+                        </Show>
                         <SortableProvider ids={openedTabs()}>
                           <For each={openedTabs()}>{(tab) => <SortableTab tab={tab} onTabClose={tabs().close} />}</For>
                         </SortableProvider>
@@ -376,6 +389,19 @@ export function SessionSidePanel(props: {
                           <div class="relative pt-2 flex-1 min-h-0 overflow-hidden">
                             <SessionContextTab />
                           </div>
+                        </Show>
+                      </Tabs.Content>
+                    </Show>
+
+                    <Show when={props.hasQuestions()}>
+                      <Tabs.Content value="questions" class="flex flex-col h-full overflow-hidden contain-strict">
+                        <Show when={activeTab() === "questions"}>
+                          <SessionQuestionsPanel
+                            userMessages={props.userMessages}
+                            activeMessageID={props.activeMessageID}
+                            loading={props.questionsLoading}
+                            onSelectMessage={props.onSelectQuestion}
+                          />
                         </Show>
                       </Tabs.Content>
                     </Show>
