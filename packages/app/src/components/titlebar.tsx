@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createResource, createSignal, Match, onMount, Show, Switch, untrack } from "solid-js"
-import { createStore } from "solid-js/store"
+import { createStore, produce } from "solid-js/store"
 import { useLocation, useNavigate, useParams } from "@solidjs/router"
 import { IconButton } from "@opencode-ai/ui/icon-button"
 import { Icon } from "@opencode-ai/ui/icon"
@@ -23,7 +23,7 @@ import { applyPath, backPath, forwardPath } from "./titlebar-history"
 import { TitlebarTabStrip } from "@/components/titlebar-tab-strip"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { createMediaQuery } from "@solid-primitives/media"
-import { readSessionTabsRemovedDetail, SESSION_TABS_REMOVED_EVENT } from "@/components/titlebar-session-events"
+import { readSessionTabsRemovedDetail, SESSION_TABS_REMOVED_EVENT, notifySessionTabsRemoved } from "@/components/titlebar-session-events"
 import { useGlobal } from "@/context/global"
 import { ServerConnection, useServer } from "@/context/server"
 import { tabKey, useTabs } from "@/context/tabs"
@@ -31,6 +31,7 @@ import "./titlebar.css"
 import { newTabTooltipKeybind } from "./command-tooltip-keybind"
 import { useMobileShell } from "@/components/mobile-shell"
 import { sessionTitle as formatSessionTitle } from "@/utils/session-title"
+import { showToast } from "@/utils/toast"
 
 type TauriDesktopWindow = {
   startDragging?: () => Promise<void>
@@ -463,98 +464,136 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
               return route.sessionId
             })
 
+            const mobileSDK = createMemo(() => {
+              const route = layout.route()
+              if (route.type !== "session") return undefined
+              const conn = global.servers.list().find((item) => ServerConnection.key(item) === (route.server ?? server.key))
+              if (!conn) return undefined
+              return global.ensureServerCtx(conn)
+            })
+
+            const mobileErrorMessage = (err: unknown) => {
+              if (err && typeof err === "object" && "data" in err) {
+                const data = (err as { data?: { message?: string } }).data
+                if (data?.message) return data.message
+              }
+              if (err instanceof Error) return err.message
+              return language.t("common.requestFailed")
+            }
+
             const archiveMobileSession = async () => {
               const id = mobileSessionId()
-              if (!id) return
-              const route = layout.route()
-              if (route.type !== "session") return
-              const conn = global.servers.list().find((item) => ServerConnection.key(item) === (route.server ?? server.key))
-              if (!conn) return
-              const sdk = global.ensureServerCtx(conn).sdk
-              await sdk.client.session.update({ sessionID: id, time: { archived: Date.now() } })
-              navigate(`/${params.dir}/session`)
+              const ctx = mobileSDK()
+              if (!id || !ctx) return
+
+              const sessionData = ctx.sync.session.get(id)
+              if (!sessionData) return
+
+              const [store, setStore] = ctx.sync.child(sessionData.directory)
+              const sessions = store.session ?? []
+              const index = sessions.findIndex((s) => s.id === id)
+              const nextSession = index === -1 ? undefined : (sessions[index + 1] ?? sessions[index - 1])
+
+              await ctx.sdk.client.session
+                .update({ sessionID: id, time: { archived: Date.now() } })
+                .then(() => {
+                  setStore(
+                    produce((draft) => {
+                      const idx = draft.session.findIndex((s) => s.id === id)
+                      if (idx !== -1) draft.session.splice(idx, 1)
+                    }),
+                  )
+                  ctx.sync.session.evict(id)
+                  notifySessionTabsRemoved({ directory: sessionData.directory, sessionIDs: [id] })
+                  navigate(`/${params.dir}/session`)
+                })
+                .catch((err) => {
+                  showToast({
+                    title: language.t("common.requestFailed"),
+                    description: mobileErrorMessage(err),
+                  })
+                })
             }
 
             const renameMobileSession = async (title: string) => {
               const id = mobileSessionId()
-              if (!id) return
-              const route = layout.route()
-              if (route.type !== "session") return
-              const conn = global.servers.list().find((item) => ServerConnection.key(item) === (route.server ?? server.key))
-              if (!conn) return
-              const sdk = global.ensureServerCtx(conn).sdk
-              await sdk.client.session.update({ sessionID: id, title })
+              const ctx = mobileSDK()
+              if (!id || !ctx) return
+
+              await ctx.sdk.client.session
+                .update({ sessionID: id, title })
+                .catch((err) => {
+                  showToast({
+                    title: language.t("common.requestFailed"),
+                    description: mobileErrorMessage(err),
+                  })
+                })
             }
 
-            function MobileDeleteDialog(props: { sessionID: string; name: string }) {
-              const handleDelete = async () => {
-                const route = layout.route()
-                if (route.type !== "session") return
-                const conn = global.servers.list().find((item) => ServerConnection.key(item) === (route.server ?? server.key))
-                if (!conn) return
-                const sdk = global.ensureServerCtx(conn).sdk
-                await sdk.client.session.delete({ sessionID: props.sessionID })
-                dialog.close()
-                navigate(`/${params.dir}/session`)
-              }
-              return (
-                <div class="flex flex-col gap-4 p-4">
-                  <div class="flex flex-col gap-1">
-                    <span class="text-sm font-medium text-text-strong">
-                      {language.t("session.delete.title")}
-                    </span>
-                    <span class="text-sm text-text-base">
-                      {language.t("session.delete.confirm", { name: props.name })}
-                    </span>
-                  </div>
-                  <div class="flex justify-end gap-2">
-                    <Button variant="ghost" size="large" onClick={() => dialog.close()}>
-                      {language.t("common.cancel")}
-                    </Button>
-                    <Button variant="primary" size="large" onClick={handleDelete}>
-                      {language.t("session.delete.button")}
-                    </Button>
-                  </div>
-                </div>
-              )
-            }
+            const deleteMobileSession = async (sessionID: string) => {
+              const ctx = mobileSDK()
+              if (!ctx) return
 
-            function MobileRenameDialog(props: { sessionId: string; currentTitle: string; onRename: (title: string) => Promise<void> }) {
-              const [value, setValue] = createSignal(props.currentTitle)
-              const handleRename = async () => {
-                const next = value().trim()
-                if (!next || next === props.currentTitle) {
-                  dialog.close()
-                  return
+              const sessionData = ctx.sync.session.get(sessionID)
+              if (!sessionData) return
+
+              const [store, setStore] = ctx.sync.child(sessionData.directory)
+              const sessions = (store.session ?? []).filter((s) => !s.parentID && !s.time?.archived)
+              const index = sessions.findIndex((s) => s.id === sessionID)
+              const nextSession = index === -1 ? undefined : (sessions[index + 1] ?? sessions[index - 1])
+
+              const result = await ctx.sdk.client.session
+                .delete({ sessionID })
+                .then((x) => x.data)
+                .catch((err) => {
+                  showToast({
+                    title: language.t("session.delete.failed.title"),
+                    description: mobileErrorMessage(err),
+                  })
+                  return false
+                })
+
+              if (!result) return
+
+              const removed = new Set<string>([sessionID])
+              const byParent = new Map<string, string[]>()
+              for (const item of store.session) {
+                const parentID = item.parentID
+                if (!parentID) continue
+                const existing = byParent.get(parentID)
+                if (existing) {
+                  existing.push(item.id)
+                  continue
                 }
-                await props.onRename(next)
-                dialog.close()
+                byParent.set(parentID, [item.id])
               }
-              return (
-                <div class="flex flex-col gap-4 p-4">
-                  <div class="flex flex-col gap-1">
-                    <span class="text-sm font-medium text-text-strong">
-                      {language.t("common.rename")}
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    value={props.currentTitle}
-                    onInput={(e) => setValue(e.currentTarget.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleRename() }}
-                    class="w-full rounded-md border border-border-base bg-background-base px-3 py-2 text-sm text-text-base outline-none focus:border-border-interactive"
-                    autofocus
-                  />
-                  <div class="flex justify-end gap-2">
-                    <Button variant="ghost" size="large" onClick={() => dialog.close()}>
-                      {language.t("common.cancel")}
-                    </Button>
-                    <Button variant="primary" size="large" onClick={handleRename}>
-                      {language.t("common.save")}
-                    </Button>
-                  </div>
-                </div>
+
+              const stack = [sessionID]
+              while (stack.length) {
+                const parentID = stack.pop()
+                if (!parentID) continue
+
+                const children = byParent.get(parentID)
+                if (!children) continue
+
+                for (const child of children) {
+                  if (removed.has(child)) continue
+                  removed.add(child)
+                  stack.push(child)
+                }
+              }
+
+              setStore(
+                produce((draft) => {
+                  draft.session = draft.session.filter((s) => !removed.has(s.id))
+                }),
               )
+
+              for (const id of removed) {
+                ctx.sync.session.evict(id)
+              }
+              notifySessionTabsRemoved({ directory: sessionData.directory, sessionIDs: [...removed] })
+              navigate(`/${params.dir}/session`)
             }
 
             return (
@@ -571,6 +610,53 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                     <button
                       type="button"
                       class="flex-1 truncate text-center text-[13px] leading-4 font-medium text-text-base"
+                      onClick={() => {
+                        const id = mobileSessionId()
+                        if (!id) return
+                        dialog.show(() => (
+                          <MobileSessionInfoSheet
+                            sessionID={id}
+                            onClose={() => dialog.close()}
+                            labels={{
+                              rename: language.t("common.rename"),
+                              archive: language.t("common.archive"),
+                              delete: language.t("common.delete"),
+                            }}
+                            onRename={() => {
+                              const currentTitle = session()?.title ?? ""
+                              dialog.show(() => (
+                                <MobileRenameDialog
+                                  currentTitle={currentTitle}
+                                  onRename={renameMobileSession}
+                                  onClose={() => dialog.close()}
+                                  labels={{
+                                    title: language.t("common.rename"),
+                                    cancel: language.t("common.cancel"),
+                                    save: language.t("common.save"),
+                                  }}
+                                />
+                              ))
+                            }}
+                            onArchive={() => void archiveMobileSession()}
+                            onDelete={() => {
+                              dialog.show(() => (
+                                <MobileDeleteDialog
+                                  sessionID={id}
+                                  name={mobileSessionTitle()}
+                                  onDelete={deleteMobileSession}
+                                  onClose={() => dialog.close()}
+                                  labels={{
+                                    title: language.t("session.delete.title"),
+                                    confirm: language.t("session.delete.confirm", { name: mobileSessionTitle() }),
+                                    cancel: language.t("common.cancel"),
+                                    button: language.t("session.delete.button"),
+                                  }}
+                                />
+                              ))
+                            }}
+                          />
+                        ))
+                      }}
                     >
                       {mobileSessionTitle()}
                     </button>
@@ -590,13 +676,21 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                         />
                         <MenuV2.Portal>
                           <MenuV2.Content style={{ "min-width": "120px" }}>
-                            <MenuV2.Item onSelect={() => dialog.show(() => (
-                              <MobileRenameDialog
-                                sessionId={mobileSessionId()!}
-                                currentTitle={session()?.title ?? ""}
-                                onRename={renameMobileSession}
-                              />
-                            ))}>
+                            <MenuV2.Item onSelect={() => {
+                              const currentTitle = session()?.title ?? ""
+                              dialog.show(() => (
+                                <MobileRenameDialog
+                                  currentTitle={currentTitle}
+                                  onRename={renameMobileSession}
+                                  onClose={() => dialog.close()}
+                                  labels={{
+                                    title: language.t("common.rename"),
+                                    cancel: language.t("common.cancel"),
+                                    save: language.t("common.save"),
+                                  }}
+                                />
+                              ))
+                            }}>
                               {language.t("common.rename")}
                             </MenuV2.Item>
                             <MenuV2.Item onSelect={() => void archiveMobileSession()}>
@@ -610,6 +704,14 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                                 <MobileDeleteDialog
                                   sessionID={id}
                                   name={mobileSessionTitle()}
+                                  onDelete={deleteMobileSession}
+                                  onClose={() => dialog.close()}
+                                  labels={{
+                                    title: language.t("session.delete.title"),
+                                    confirm: language.t("session.delete.confirm", { name: mobileSessionTitle() }),
+                                    cancel: language.t("common.cancel"),
+                                    button: language.t("session.delete.button"),
+                                  }}
                                 />
                               ))
                             }}>
@@ -926,5 +1028,101 @@ function ChannelIndicator() {
         </div>
       )}
     </>
+  )
+}
+
+function MobileSessionInfoSheet(props: {
+  sessionID: string
+  onClose: () => void
+  labels: { rename: string; archive: string; delete: string }
+  onRename: () => void
+  onArchive: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div class="flex flex-col gap-1 p-2">
+      <MenuV2.Item onSelect={() => { props.onClose(); setTimeout(() => props.onRename(), 0) }}>
+        {props.labels.rename}
+      </MenuV2.Item>
+      <MenuV2.Item onSelect={() => { props.onClose(); setTimeout(() => props.onArchive(), 0) }}>
+        {props.labels.archive}
+      </MenuV2.Item>
+      <MenuV2.Separator />
+      <MenuV2.Item onSelect={() => { props.onClose(); setTimeout(() => props.onDelete(), 0) }}>
+        {props.labels.delete}
+      </MenuV2.Item>
+    </div>
+  )
+}
+
+function MobileDeleteDialog(props: {
+  sessionID: string
+  name: string
+  onDelete: (id: string) => Promise<void>
+  onClose: () => void
+  labels: { title: string; confirm: string; cancel: string; button: string }
+}) {
+  const handleDelete = async () => {
+    await props.onDelete(props.sessionID)
+    props.onClose()
+  }
+  return (
+    <div class="flex flex-col gap-4 p-4">
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-text-strong">{props.labels.title}</span>
+        <span class="text-sm text-text-base">{props.labels.confirm}</span>
+      </div>
+      <div class="flex justify-end gap-2">
+        <Button variant="ghost" size="large" onClick={props.onClose}>
+          {props.labels.cancel}
+        </Button>
+        <Button variant="primary" size="large" onClick={handleDelete}>
+          {props.labels.button}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function MobileRenameDialog(props: {
+  currentTitle: string
+  onRename: (title: string) => Promise<void>
+  onClose: () => void
+  labels: { title: string; cancel: string; save: string }
+}) {
+  const [value, setValue] = createSignal(props.currentTitle)
+  const handleRename = async () => {
+    const next = value().trim()
+    if (!next || next === props.currentTitle) {
+      props.onClose()
+      return
+    }
+    await props.onRename(next)
+    props.onClose()
+  }
+  return (
+    <div class="flex flex-col gap-4 p-4">
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-text-strong">{props.labels.title}</span>
+      </div>
+      <input
+        type="text"
+        value={props.currentTitle}
+        onInput={(e) => setValue(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleRename()
+        }}
+        class="w-full rounded-md border border-border-base bg-background-base px-3 py-2 text-sm text-text-base outline-none focus:border-border-interactive"
+        autofocus
+      />
+      <div class="flex justify-end gap-2">
+        <Button variant="ghost" size="large" onClick={props.onClose}>
+          {props.labels.cancel}
+        </Button>
+        <Button variant="primary" size="large" onClick={handleRename}>
+          {props.labels.save}
+        </Button>
+      </div>
+    </div>
   )
 }
