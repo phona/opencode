@@ -14,6 +14,7 @@ import {
   startTransition,
   Switch,
 } from "solid-js"
+import { createMediaQuery } from "@solid-primitives/media"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { createStore, produce } from "solid-js/store"
 import { useQuery } from "@tanstack/solid-query"
@@ -273,6 +274,7 @@ export function NewHome() {
     search: "",
     searchFocused: false,
   })
+  const isDesktop = createMediaQuery("(min-width: 768px)")
   const selection = layout.home.selection
 
   const focusedServer = createMemo(
@@ -539,8 +541,13 @@ export function NewHome() {
   }
 
   return (
-    <div class="rounded-[10px] shadow-[var(--v2-elevation-raised)] m-2 min-h-0 lg:overflow-hidden bg-v2-background-bg-base self-stretch flex-1">
-      <div class="mx-auto grid h-full w-full max-w-[1080px] grid-rows-[auto_minmax(0,1fr)_auto] gap-4 px-3 lg:grid-cols-[280px_minmax(0,720px)] lg:grid-rows-1 lg:gap-8 lg:px-6">
+    <div
+      class="min-h-0 flex-1 lg:overflow-hidden bg-v2-background-bg-base self-stretch"
+      classList={{
+        "rounded-[10px] shadow-[var(--v2-elevation-raised)] m-2": isDesktop(),
+      }}
+    >
+      <div class="mx-auto grid h-full w-full max-w-[1080px] grid-rows-[auto_minmax(0,1fr)_auto] gap-2 px-3 lg:grid-cols-[280px_minmax(0,720px)] lg:grid-rows-1 lg:gap-8 lg:px-6">
         <HomeProjectColumn
           projects={projects()}
           recentlyClosed={recentlyClosed()}
@@ -569,7 +576,7 @@ export function NewHome() {
         />
 
         <section
-          class="min-h-0 min-w-0 flex-1 flex flex-col pt-6 lg:pt-12 relative"
+          class="min-h-0 min-w-0 flex-1 flex flex-col pt-2 lg:pt-12 relative"
           aria-label={language.t("sidebar.project.recentSessions")}
         >
           <HomeSessionSearch
@@ -682,6 +689,7 @@ function HomeProjectColumn(props: {
   openHelp: () => void
   language: ReturnType<typeof useLanguage>
 }) {
+  const isDesktop = createMediaQuery("(min-width: 768px)")
   const global = useGlobal()
   const dialog = useDialog()
   const controller = useServerManagementController({ navigateOnAdd: false })
@@ -697,7 +705,11 @@ function HomeProjectColumn(props: {
 
   return (
     <aside
-      class="mt-6 flex min-h-0 min-w-0 flex-col gap-4 overflow-hidden lg:mt-14 lg:pt-[52px]"
+      class="flex min-h-0 min-w-0 flex-col overflow-hidden lg:pt-[52px]"
+      classList={{
+        "mt-6 gap-4 lg:mt-14": isDesktop(),
+        "mt-2 gap-2": !isDesktop(),
+      }}
       aria-label={props.language.t("home.projects")}
     >
       <div class="flex h-7 min-w-0 shrink-0 items-center justify-between pl-1.5 pr-3">
