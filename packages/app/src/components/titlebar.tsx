@@ -30,7 +30,7 @@ import { tabKey, useTabs } from "@/context/tabs"
 import "./titlebar.css"
 import { newTabTooltipKeybind } from "./command-tooltip-keybind"
 import { useMobileShell } from "@/components/mobile-shell"
-import { sessionTitle as formatSessionTitle } from "@/utils/session-title"
+import { sessionTitle } from "@/utils/session-title"
 import { showToast } from "@/utils/toast"
 
 type TauriDesktopWindow = {
@@ -451,12 +451,19 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
 
             const [tabsAreOverflowing, setTabsAreOverflowing] = createSignal(false)
 
-            const mobileShell = useMobileShell()
+            const mobileShell = useMobileShell() ?? {
+              openHome: () => {},
+              closeHome: () => {},
+              openChanges: () => {},
+              closeChanges: () => {},
+              isHomeOpen: () => false,
+              isChangesOpen: () => false,
+            }
             const dialog = useDialog()
             const mobileSessionTitle = createMemo(() => {
               const s = session()
               if (!s) return language.t("command.session.new")
-              return formatSessionTitle(s.title) || language.t("command.session.new")
+              return sessionTitle(s.title) || language.t("command.session.new")
             })
             const mobileSessionId = createMemo(() => {
               const route = layout.route()
@@ -1034,17 +1041,29 @@ function MobileSessionInfoSheet(props: {
   onDelete: () => void
 }) {
   return (
-    <div class="flex flex-col gap-1 p-2">
-      <MenuV2.Item onSelect={() => { props.onClose(); setTimeout(() => props.onRename(), 0) }}>
+    <div class="flex flex-col gap-px p-1">
+      <button
+        type="button"
+        onClick={() => { props.onClose(); setTimeout(() => props.onRename(), 0) }}
+        class="flex items-center h-7 px-3 rounded text-13 font-440 leading-none text-v2-text-text-base hover:bg-v2-overlay-simple-overlay-hover"
+      >
         {props.labels.rename}
-      </MenuV2.Item>
-      <MenuV2.Item onSelect={() => { props.onClose(); setTimeout(() => props.onArchive(), 0) }}>
+      </button>
+      <button
+        type="button"
+        onClick={() => { props.onClose(); setTimeout(() => props.onArchive(), 0) }}
+        class="flex items-center h-7 px-3 rounded text-13 font-440 leading-none text-v2-text-text-base hover:bg-v2-overlay-simple-overlay-hover"
+      >
         {props.labels.archive}
-      </MenuV2.Item>
-      <MenuV2.Separator />
-      <MenuV2.Item onSelect={() => { props.onClose(); setTimeout(() => props.onDelete(), 0) }}>
+      </button>
+      <hr class="h-px w-full my-0.5 border-none bg-v2-border-border-muted" />
+      <button
+        type="button"
+        onClick={() => { props.onClose(); setTimeout(() => props.onDelete(), 0) }}
+        class="flex items-center h-7 px-3 rounded text-13 font-440 leading-none text-v2-text-text-base hover:bg-v2-overlay-simple-overlay-hover"
+      >
         {props.labels.delete}
-      </MenuV2.Item>
+      </button>
     </div>
   )
 }

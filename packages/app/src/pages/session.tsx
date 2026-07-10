@@ -15,6 +15,7 @@ import {
   onMount,
   type ParentProps,
   untrack,
+  useContext,
 } from "solid-js"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { createMediaQuery } from "@solid-primitives/media"
@@ -90,7 +91,7 @@ import { useUsageExceededDialogs } from "./session/usage-exceeded-dialogs"
 import { createSessionOwnership } from "./session/session-ownership"
 import { createSessionLineage } from "./session/session-lineage"
 import { MobileDrawer } from "@/components/mobile-drawer"
-import { useMobileShell } from "@/components/mobile-shell"
+import { MobileShellContext } from "@/components/mobile-shell"
 import { NewHome } from "@/pages/home"
 import { createSwipeGesture } from "@/utils/swipe-gesture"
 
@@ -360,7 +361,14 @@ export default function Page() {
   const { params, sessionKey, workspaceKey, tabs, view } = useSessionLayout()
   const sessionOwnership = createSessionOwnership(sessionKey)
   const newSessionDesign = createMemo(() => settings.general.newLayoutDesigns())
-  const mobileShell = useMobileShell()
+  const mobileShell = useContext(MobileShellContext) ?? {
+    openHome: () => {},
+    closeHome: () => {},
+    openChanges: () => {},
+    closeChanges: () => {},
+    isHomeOpen: () => false,
+    isChangesOpen: () => false,
+  }
 
   createEffect(() => {
     if (!prompt.ready()) return

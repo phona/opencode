@@ -9,12 +9,10 @@ export type MobileShellApi = {
   isChangesOpen: () => boolean
 }
 
-const MobileShellContext = createContext<MobileShellApi | undefined>(undefined)
+export const MobileShellContext = createContext<MobileShellApi | undefined>(undefined)
 
 export const useMobileShell = () => {
-  const ctx = useContext(MobileShellContext)
-  if (!ctx) throw new Error("useMobileShell must be used inside MobileShell")
-  return ctx
+  return useContext(MobileShellContext)
 }
 
 export function MobileShellProvider(props: ParentProps<{ value: MobileShellApi }>) {

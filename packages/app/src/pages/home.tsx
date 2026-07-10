@@ -5,6 +5,7 @@ import {
   createMemo,
   createResource,
   createRoot,
+  createSignal,
   For,
   Match,
   on,
@@ -690,6 +691,7 @@ function HomeProjectColumn(props: {
   language: ReturnType<typeof useLanguage>
 }) {
   const isDesktop = createMediaQuery("(min-width: 768px)")
+  const [expanded, setExpanded] = createSignal(false)
   const global = useGlobal()
   const dialog = useDialog()
   const controller = useServerManagementController({ navigateOnAdd: false })
@@ -703,6 +705,8 @@ function HomeProjectColumn(props: {
     { initialValue: _state },
   )
 
+  const showContent = () => isDesktop() || expanded()
+
   return (
     <aside
       class="flex min-h-0 min-w-0 flex-col overflow-hidden lg:pt-[52px]"
@@ -712,8 +716,21 @@ function HomeProjectColumn(props: {
       }}
       aria-label={props.language.t("home.projects")}
     >
-      <div class="flex h-7 min-w-0 shrink-0 items-center justify-between pl-1.5 pr-3">
+      <div class="flex h-7 min-w-0 shrink-0 items-center gap-0.5 pl-1.5 pr-3">
+        <Show when={!isDesktop()}>
+          <IconButtonV2
+            variant="ghost-muted"
+            size="small"
+            class="[&_[data-slot=icon-svg]]:text-v2-icon-icon-muted"
+            icon={<IconV2 name="chevron-down" />}
+            aria-label={expanded() ? props.language.t("home.project.collapse") : props.language.t("home.project.expand")}
+            aria-expanded={expanded()}
+            onClick={() => setExpanded((v) => !v)}
+            style={{ transform: `rotate(${expanded() ? 0 : -90}deg)` }}
+          />
+        </Show>
         <div class="text-v2-text-text-muted [font-weight:530]">{props.language.t("home.projects")}</div>
+        <div class="flex-1" />
         <Show
           when={global.servers.list().length === 1 && !(props.projects.length === 0 && props.recentlyClosed.length > 0)}
         >
@@ -731,69 +748,71 @@ function HomeProjectColumn(props: {
           </TooltipV2>
         </Show>
       </div>
-      <ScrollView data-slot="home-projects-scroll" class="min-h-0 min-w-0 shrink">
-        <Show
-          when={global.servers.list().length > 1}
-          fallback={
-            <div class="pr-3">
-              <Show
-                when={props.projects.length > 0}
-                fallback={
-                  <HomeProjectEmpty
-                    server={global.servers.list()[0]!}
-                    recentlyClosed={props.recentlyClosed}
-                    homedir={props.homedir}
-                    chooseProject={props.chooseProject}
-                    openRecentProject={props.openRecentProject}
-                    language={props.language}
-                  />
-                }
-              >
-                <HomeProjectList {...props} server={global.servers.list()[0]!} />
-              </Show>
-            </div>
-          }
-        >
-          <div class="flex min-w-0 flex-col gap-4 pr-3">
-            <For each={global.servers.list()}>
-              {(item) => {
-                const key = ServerConnection.key(item)
-                const healthy = () => !!global.servers.health[key]?.healthy
-                const serverCtx = global.ensureServerCtx(item)
-                const projects = () => serverCtx.projects.list()
-                const hasProjects = () => projects().length > 0
-                const collapsed = () => !!state().collapsed[key]
-                return (
-                  <div class="flex min-w-0 flex-col gap-1">
-                    <HomeServerRow
-                      server={item}
-                      selected={props.selected.server === key && !props.selected.directory}
-                      collapsed={collapsed()}
-                      health={global.servers.health[key]}
-                      controller={controller}
-                      focusServer={props.focusServer}
+      <Show when={showContent()}>
+        <ScrollView data-slot="home-projects-scroll" class="min-h-0 min-w-0 shrink">
+          <Show
+            when={global.servers.list().length > 1}
+            fallback={
+              <div class="pr-3">
+                <Show
+                  when={props.projects.length > 0}
+                  fallback={
+                    <HomeProjectEmpty
+                      server={global.servers.list()[0]!}
+                      recentlyClosed={props.recentlyClosed}
+                      homedir={props.homedir}
                       chooseProject={props.chooseProject}
-                      openEdit={(server) => dialog.show(() => <DialogServerV2 mode="edit" server={server} />)}
-                      toggleCollapsed={() => setState("collapsed", key, !state().collapsed[key])}
+                      openRecentProject={props.openRecentProject}
                       language={props.language}
                     />
-                    <Show when={healthy() && hasProjects() && !collapsed()}>
-                      <div class="mx-3 h-px bg-v2-border-border-base" />
-                      <HomeProjectList {...props} server={item} projects={projects()} />
-                    </Show>
-                  </div>
-                )
-              }}
-            </For>
-          </div>
-        </Show>
-      </ScrollView>
-      <HomeUtilityNav
-        class="mb-8 mt-4 hidden shrink-0 lg:flex"
-        openSettings={props.openSettings}
-        openHelp={props.openHelp}
-        language={props.language}
-      />
+                  }
+                >
+                  <HomeProjectList {...props} server={global.servers.list()[0]!} />
+                </Show>
+              </div>
+            }
+          >
+            <div class="flex min-w-0 flex-col gap-2 pr-3 lg:gap-4">
+              <For each={global.servers.list()}>
+                {(item) => {
+                  const key = ServerConnection.key(item)
+                  const healthy = () => !!global.servers.health[key]?.healthy
+                  const serverCtx = global.ensureServerCtx(item)
+                  const projects = () => serverCtx.projects.list()
+                  const hasProjects = () => projects().length > 0
+                  const collapsed = () => !!state().collapsed[key]
+                  return (
+                    <div class="flex min-w-0 flex-col gap-1">
+                      <HomeServerRow
+                        server={item}
+                        selected={props.selected.server === key && !props.selected.directory}
+                        collapsed={collapsed()}
+                        health={global.servers.health[key]}
+                        controller={controller}
+                        focusServer={props.focusServer}
+                        chooseProject={props.chooseProject}
+                        openEdit={(server) => dialog.show(() => <DialogServerV2 mode="edit" server={server} />)}
+                        toggleCollapsed={() => setState("collapsed", key, !state().collapsed[key])}
+                        language={props.language}
+                      />
+                      <Show when={healthy() && hasProjects() && !collapsed()}>
+                        <div class="mx-3 h-px bg-v2-border-border-base" />
+                        <HomeProjectList {...props} server={item} projects={projects()} />
+                      </Show>
+                    </div>
+                  )
+                }}
+              </For>
+            </div>
+          </Show>
+        </ScrollView>
+        <HomeUtilityNav
+          class="mb-8 mt-4 hidden shrink-0 lg:flex"
+          openSettings={props.openSettings}
+          openHelp={props.openHelp}
+          language={props.language}
+        />
+      </Show>
     </aside>
   )
 }

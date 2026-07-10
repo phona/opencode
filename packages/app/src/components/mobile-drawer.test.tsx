@@ -1,10 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { createRoot, createSignal } from "solid-js"
 import { makeEventListener } from "@solid-primitives/event-listener"
+import { MobileDrawer } from "./mobile-drawer"
 
 describe("MobileDrawer", () => {
   test("exports a component function", () => {
-    const { MobileDrawer } = require("./mobile-drawer")
     expect(typeof MobileDrawer).toBe("function")
     expect(MobileDrawer.name).toBe("MobileDrawer")
   })
