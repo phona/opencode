@@ -3,8 +3,10 @@ import { codeToHtml } from "shiki"
 import markedShiki from "marked-shiki"
 import { createOverflow, useShareMessages } from "./common"
 import { CopyButton } from "./copy-button"
-import { createResource, createSignal } from "solid-js"
+import { createEffect, createResource, createSignal, onMount } from "solid-js"
 import style from "./content-markdown.module.css"
+import { renderMermaidDiagrams } from "@opencode-ai/session-ui/mermaid"
+import "@opencode-ai/session-ui/mermaid.css"
 
 const markedWithShiki = marked.use(
   {
@@ -17,6 +19,10 @@ const markedWithShiki = marked.use(
   },
   markedShiki({
     highlight(code, lang) {
+      if (lang === "mermaid") {
+        const encoded = encodeURIComponent(code)
+        return `<div data-component="mermaid-diagram" data-mermaid-content="${encoded}"></div>`
+      }
       return codeToHtml(code, {
         lang: lang || "text",
         themes: {
@@ -43,6 +49,18 @@ export function ContentMarkdown(props: Props) {
   const [expanded, setExpanded] = createSignal(false)
   const overflow = createOverflow()
   const messages = useShareMessages()
+
+  onMount(() => {
+    if (html.state === "ready" && overflow.ref) {
+      renderMermaidDiagrams(overflow.ref)
+    }
+  })
+
+  createEffect(() => {
+    if (html.state === "ready" && overflow.ref) {
+      queueMicrotask(() => renderMermaidDiagrams(overflow.ref))
+    }
+  })
 
   return (
     <div
