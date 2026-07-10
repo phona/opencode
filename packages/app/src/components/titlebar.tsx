@@ -10,6 +10,8 @@ import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { KeybindV2 } from "@opencode-ai/ui/v2/keybind-v2"
 import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
+import { MenuV2 } from "@opencode-ai/ui/v2/menu-v2"
+import { useDialog } from "@opencode-ai/ui/context/dialog"
 
 import { LayoutRoute, useLayout } from "@/context/layout"
 import { usePlatform } from "@/context/platform"
@@ -27,6 +29,8 @@ import { ServerConnection, useServer } from "@/context/server"
 import { tabKey, useTabs } from "@/context/tabs"
 import "./titlebar.css"
 import { newTabTooltipKeybind } from "./command-tooltip-keybind"
+import { useMobileShell } from "@/components/mobile-shell"
+import { sessionTitle as formatSessionTitle } from "@/utils/session-title"
 
 type TauriDesktopWindow = {
   startDragging?: () => Promise<void>
@@ -446,7 +450,178 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
 
             const [tabsAreOverflowing, setTabsAreOverflowing] = createSignal(false)
 
+            const mobileShell = useMobileShell()
+            const dialog = useDialog()
+            const mobileSessionTitle = createMemo(() => {
+              const s = session()
+              if (!s) return language.t("command.session.new")
+              return formatSessionTitle(s.title) || language.t("command.session.new")
+            })
+            const mobileSessionId = createMemo(() => {
+              const route = layout.route()
+              if (route.type !== "session") return undefined
+              return route.sessionId
+            })
+
+            const archiveMobileSession = async () => {
+              const id = mobileSessionId()
+              if (!id) return
+              const route = layout.route()
+              if (route.type !== "session") return
+              const conn = global.servers.list().find((item) => ServerConnection.key(item) === (route.server ?? server.key))
+              if (!conn) return
+              const sdk = global.ensureServerCtx(conn).sdk
+              await sdk.client.session.update({ sessionID: id, time: { archived: Date.now() } })
+              navigate(`/${params.dir}/session`)
+            }
+
+            const renameMobileSession = async (title: string) => {
+              const id = mobileSessionId()
+              if (!id) return
+              const route = layout.route()
+              if (route.type !== "session") return
+              const conn = global.servers.list().find((item) => ServerConnection.key(item) === (route.server ?? server.key))
+              if (!conn) return
+              const sdk = global.ensureServerCtx(conn).sdk
+              await sdk.client.session.update({ sessionID: id, title })
+            }
+
+            function MobileDeleteDialog(props: { sessionID: string; name: string }) {
+              const handleDelete = async () => {
+                const route = layout.route()
+                if (route.type !== "session") return
+                const conn = global.servers.list().find((item) => ServerConnection.key(item) === (route.server ?? server.key))
+                if (!conn) return
+                const sdk = global.ensureServerCtx(conn).sdk
+                await sdk.client.session.delete({ sessionID: props.sessionID })
+                dialog.close()
+                navigate(`/${params.dir}/session`)
+              }
+              return (
+                <div class="flex flex-col gap-4 p-4">
+                  <div class="flex flex-col gap-1">
+                    <span class="text-sm font-medium text-text-strong">
+                      {language.t("session.delete.title")}
+                    </span>
+                    <span class="text-sm text-text-base">
+                      {language.t("session.delete.confirm", { name: props.name })}
+                    </span>
+                  </div>
+                  <div class="flex justify-end gap-2">
+                    <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+                      {language.t("common.cancel")}
+                    </Button>
+                    <Button variant="primary" size="large" onClick={handleDelete}>
+                      {language.t("session.delete.button")}
+                    </Button>
+                  </div>
+                </div>
+              )
+            }
+
+            function MobileRenameDialog(props: { sessionId: string; currentTitle: string; onRename: (title: string) => Promise<void> }) {
+              const [value, setValue] = createSignal(props.currentTitle)
+              const handleRename = async () => {
+                const next = value().trim()
+                if (!next || next === props.currentTitle) {
+                  dialog.close()
+                  return
+                }
+                await props.onRename(next)
+                dialog.close()
+              }
+              return (
+                <div class="flex flex-col gap-4 p-4">
+                  <div class="flex flex-col gap-1">
+                    <span class="text-sm font-medium text-text-strong">
+                      {language.t("common.rename")}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={props.currentTitle}
+                    onInput={(e) => setValue(e.currentTarget.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleRename() }}
+                    class="w-full rounded-md border border-border-base bg-background-base px-3 py-2 text-sm text-text-base outline-none focus:border-border-interactive"
+                    autofocus
+                  />
+                  <div class="flex justify-end gap-2">
+                    <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+                      {language.t("common.cancel")}
+                    </Button>
+                    <Button variant="primary" size="large" onClick={handleRename}>
+                      {language.t("common.save")}
+                    </Button>
+                  </div>
+                </div>
+              )
+            }
+
             return (
+              <Show
+                when={!mobile()}
+                fallback={
+                  <div class="h-full flex-1 flex items-center justify-between px-2">
+                    <IconButtonV2
+                      variant="ghost-muted"
+                      icon={<IconV2 name="grid-plus" />}
+                      onClick={mobileShell.openHome}
+                      aria-label={language.t("home.title")}
+                    />
+                    <button
+                      type="button"
+                      class="flex-1 truncate text-center text-[13px] leading-4 font-medium text-text-base"
+                    >
+                      {mobileSessionTitle()}
+                    </button>
+                    <div class="flex items-center gap-1">
+                      <IconButtonV2
+                        variant="ghost-muted"
+                        icon={<IconV2 name="review" />}
+                        onClick={mobileShell.openChanges}
+                        aria-label={language.t("session.tab.review")}
+                      />
+                      <MenuV2 gutter={6} placement="bottom-end" modal={false}>
+                        <MenuV2.Trigger
+                          as={IconButtonV2}
+                          icon={<IconV2 name="outline-dots" />}
+                          variant="ghost-muted"
+                          aria-label={language.t("common.moreOptions")}
+                        />
+                        <MenuV2.Portal>
+                          <MenuV2.Content style={{ "min-width": "120px" }}>
+                            <MenuV2.Item onSelect={() => dialog.show(() => (
+                              <MobileRenameDialog
+                                sessionId={mobileSessionId()!}
+                                currentTitle={session()?.title ?? ""}
+                                onRename={renameMobileSession}
+                              />
+                            ))}>
+                              {language.t("common.rename")}
+                            </MenuV2.Item>
+                            <MenuV2.Item onSelect={() => void archiveMobileSession()}>
+                              {language.t("common.archive")}
+                            </MenuV2.Item>
+                            <MenuV2.Separator />
+                            <MenuV2.Item onSelect={() => {
+                              const id = mobileSessionId()
+                              if (!id) return
+                              dialog.show(() => (
+                                <MobileDeleteDialog
+                                  sessionID={id}
+                                  name={mobileSessionTitle()}
+                                />
+                              ))
+                            }}>
+                              {language.t("common.delete")}
+                            </MenuV2.Item>
+                          </MenuV2.Content>
+                        </MenuV2.Portal>
+                      </MenuV2>
+                    </div>
+                  </div>
+                }
+              >
               <div
                 class="h-full flex-1 overflow-hidden flex flex-row items-center gap-1.5 px-2 md:pr-3"
                 classList={{
@@ -525,6 +700,7 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                   <div data-tauri-decorum-tb class="flex flex-row" />
                 </Show>
               </div>
+              </Show>
             )
           }}
         </Match>
