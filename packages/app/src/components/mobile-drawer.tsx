@@ -12,18 +12,21 @@ export function MobileDrawer(props: {
 
   createEffect(() => {
     if (!panelRef) return
-    makeEventListener(panelRef, "touchstart", (event) => {
-      const touch = event.touches[0]
-      if (!touch) return
-      startX = touch.clientX
-    })
-    makeEventListener(panelRef, "touchend", (event) => {
-      const touch = event.changedTouches[0]
-      if (!touch) return
-      const fromEdge = props.side === "left" ? startX <= 20 : panelRef!.clientWidth - startX <= 20
-      const deltaX = touch.clientX - startX
-      if (fromEdge && Math.abs(deltaX) > 60) props.onClose()
-    })
+    const cleanups = [
+      makeEventListener(panelRef, "touchstart", (event) => {
+        const touch = event.touches[0]
+        if (!touch) return
+        startX = touch.clientX
+      }),
+      makeEventListener(panelRef, "touchend", (event) => {
+        const touch = event.changedTouches[0]
+        if (!touch) return
+        const fromEdge = props.side === "left" ? startX <= 20 : panelRef!.clientWidth - startX <= 20
+        const deltaX = touch.clientX - startX
+        if (fromEdge && Math.abs(deltaX) > 60) props.onClose()
+      })
+    ]
+    return () => cleanups.forEach(fn => fn())
   })
 
   return (
