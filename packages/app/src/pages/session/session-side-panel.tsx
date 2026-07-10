@@ -62,6 +62,7 @@ export function SessionSidePanel(props: {
   questionsLoading: () => boolean
   onSelectQuestion: (messageID: string) => void
   hasQuestions: () => boolean
+  mobile?: boolean
 }) {
   const layout = useLayout()
   const settings = useSettings()
@@ -75,10 +76,10 @@ export function SessionSidePanel(props: {
   const isDesktop = createMediaQuery("(min-width: 768px)")
   const shown = settings.visibility.fileTree
 
-  const reviewOpen = createMemo(() => isDesktop() && view().reviewPanel.opened())
+  const reviewOpen = createMemo(() => (props.mobile ? true : isDesktop()) && view().reviewPanel.opened())
   const fileOpen = createMemo(
     () =>
-      isDesktop() &&
+      (props.mobile ? true : isDesktop()) &&
       shouldShowFileTree({
         visible: shown(),
         opened: layout.fileTree.opened(),
@@ -86,7 +87,7 @@ export function SessionSidePanel(props: {
   )
   const open = createMemo(() => reviewOpen() || fileOpen())
   const rendered = createMemo<boolean>((previous) => previous || open(), false)
-  const reviewTab = createMemo(() => isDesktop())
+  const reviewTab = createMemo(() => props.mobile || isDesktop())
   const panelWidth = createMemo(() => {
     if (!open()) return "0px"
     if (reviewOpen()) return "auto"
@@ -231,37 +232,38 @@ export function SessionSidePanel(props: {
   })
 
   return (
-    <Show when={isDesktop() && !(settings.general.newLayoutDesigns() && !params.id)}>
+    <Show when={props.mobile || (isDesktop() && !(settings.general.newLayoutDesigns() && !params.id))}>
       <aside
         id="review-panel"
         aria-label={language.t("session.panel.reviewAndFiles")}
-        aria-hidden={!open()}
-        inert={!open()}
+        aria-hidden={!props.mobile && !open()}
+        inert={!props.mobile && !open()}
         class="relative min-w-0 flex overflow-hidden bg-background-base"
         classList={{
-          "h-full shrink-0": !props.stacked,
+          "h-full shrink-0": !props.stacked && !props.mobile,
           "h-full min-h-0": props.stacked,
-          "pointer-events-none": !open(),
+          "size-full": props.mobile,
+          "pointer-events-none": !props.mobile && !open(),
           "transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none":
-            !props.size.active() && !props.reviewSnap,
-          "rounded-[10px] shadow-[var(--v2-elevation-raised)] overflow-hidden": settings.general.newLayoutDesigns(),
+            !props.mobile && !props.size.active() && !props.reviewSnap,
+          "rounded-[10px] shadow-[var(--v2-elevation-raised)] overflow-hidden": settings.general.newLayoutDesigns() && !props.mobile,
           "flex-1": reviewOpen(),
         }}
-        style={{ width: panelWidth() }}
+        style={props.mobile ? undefined : { width: panelWidth() }}
       >
-        <Show when={rendered()}>
+        <Show when={props.mobile || rendered()}>
           <div
             class="size-full flex"
             classList={{
-              "border-l border-border-weaker-base": !settings.general.newLayoutDesigns(),
+              "border-l border-border-weaker-base": !settings.general.newLayoutDesigns() && !props.mobile,
             }}
           >
             <div
-              aria-hidden={!reviewOpen()}
-              inert={!reviewOpen()}
+              aria-hidden={!props.mobile && !reviewOpen()}
+              inert={!props.mobile && !reviewOpen()}
               class="relative min-w-0 h-full flex-1 overflow-hidden bg-background-base"
               classList={{
-                "pointer-events-none": !reviewOpen(),
+                "pointer-events-none": !props.mobile && !reviewOpen(),
               }}
             >
               <div class="size-full min-w-0 h-full bg-background-base">
@@ -502,7 +504,7 @@ export function SessionSidePanel(props: {
                     </Tabs.Content>
                   </Tabs>
                 </div>
-                <Show when={fileOpen()}>
+                <Show when={fileOpen() && !props.mobile}>
                   <div onPointerDown={() => props.size.start()}>
                     <ResizeHandle
                       direction="horizontal"
