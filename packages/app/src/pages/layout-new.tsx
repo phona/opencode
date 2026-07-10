@@ -1,4 +1,4 @@
-import { createEffect, Suspense, type ParentProps } from "solid-js"
+import { createEffect, createSignal, Suspense, type ParentProps } from "solid-js"
 import { useNavigate } from "@solidjs/router"
 import { DebugBar } from "@/components/debug-bar"
 import { HelpButton } from "@/components/help-button"
@@ -7,6 +7,7 @@ import { usePlatform } from "@/context/platform"
 import { setNavigate } from "@/utils/notification-click"
 import { setV2Toast, ToastRegion } from "@/utils/toast"
 import { useSettingsCommand } from "@/components/settings-dialog"
+import { MobileShellProvider, type MobileShellApi } from "@/components/mobile-shell"
 
 export default function NewLayout(props: ParentProps) {
   const platform = usePlatform()
@@ -15,6 +16,18 @@ export default function NewLayout(props: ParentProps) {
   useSettingsCommand()
 
   createEffect(() => setV2Toast(true))
+
+  const [homeOpen, setHomeOpen] = createSignal(false)
+  const [changesOpen, setChangesOpen] = createSignal(false)
+
+  const api: MobileShellApi = {
+    openHome: () => setHomeOpen(true),
+    closeHome: () => setHomeOpen(false),
+    openChanges: () => setChangesOpen(true),
+    closeChanges: () => setChangesOpen(false),
+    isHomeOpen: () => homeOpen(),
+    isChangesOpen: () => changesOpen(),
+  }
 
   const update: TitlebarUpdate = {
     version: () => {
@@ -36,7 +49,9 @@ export default function NewLayout(props: ParentProps) {
     >
       <Titlebar update={update} />
       <main class="flex-1 min-h-0 min-w-0 overflow-x-hidden flex flex-col items-start contain-strict">
-        <Suspense>{props.children}</Suspense>
+        <MobileShellProvider value={api}>
+          <Suspense>{props.children}</Suspense>
+        </MobileShellProvider>
       </main>
       {import.meta.env.DEV && <DebugBar inline />}
       <HelpButton />
