@@ -423,10 +423,13 @@ export default function Page() {
   const size = createSizing()
   const desktopReviewOpen = createMemo(() => isDesktop() && view().reviewPanel.opened())
   const desktopV2ReviewOpen = createMemo(() => newSessionDesign() && desktopReviewOpen() && !!params.id)
+  const desktopQuestionsOpen = createMemo(
+    () => newSessionDesign() && isDesktop() && hasQuestions() && tabs().active() === "questions",
+  )
   const terminalOpen = createMemo(() => view().terminal.opened())
   const desktopTerminalOpen = createMemo(() => isDesktop() && terminalOpen())
   const desktopInlineTerminalOnlyOpen = createMemo(
-    () => newSessionDesign() && desktopTerminalOpen() && !desktopV2ReviewOpen(),
+    () => newSessionDesign() && desktopTerminalOpen() && !desktopV2ReviewOpen() && !desktopQuestionsOpen(),
   )
   const desktopFileTreeOpen = createMemo(
     () =>
@@ -437,9 +440,11 @@ export default function Page() {
       }),
   )
   const desktopSessionResizeOpen = createMemo(() =>
-    newSessionDesign() ? desktopV2ReviewOpen() || desktopTerminalOpen() : desktopReviewOpen(),
+    newSessionDesign() ? desktopV2ReviewOpen() || desktopTerminalOpen() || desktopQuestionsOpen() : desktopReviewOpen(),
   )
-  const desktopSidePanelOpen = createMemo(() => desktopSessionResizeOpen() || desktopFileTreeOpen())
+  const desktopSidePanelOpen = createMemo(() =>
+    desktopSessionResizeOpen() || desktopFileTreeOpen() || desktopQuestionsOpen(),
+  )
   const sessionPanelWidth = createMemo(() => {
     if (!desktopSidePanelOpen()) return "100%"
     if (desktopSessionResizeOpen()) return `${layout.session.width()}px`
@@ -451,6 +456,7 @@ export default function Page() {
       review: desktopV2ReviewOpen(),
       terminal: desktopTerminalOpen(),
       files: desktopFileTreeOpen(),
+      questions: desktopQuestionsOpen(),
     }),
   )
 
@@ -2162,8 +2168,13 @@ export default function Page() {
               <Show when={isDesktop()}>
                 <div
                   classList={{
-                    "min-h-0 flex-1": desktopV2ReviewOpen() || desktopFileTreeOpen(),
-                    "size-0 shrink-0 overflow-hidden": !(desktopV2ReviewOpen() || desktopFileTreeOpen()),
+                    "min-h-0 flex-1":
+                      desktopV2ReviewOpen() || desktopFileTreeOpen() || desktopQuestionsOpen(),
+                    "size-0 shrink-0 overflow-hidden": !(
+                      desktopV2ReviewOpen() ||
+                      desktopFileTreeOpen() ||
+                      desktopQuestionsOpen()
+                    ),
                   }}
                 >
                   <SessionSidePanel

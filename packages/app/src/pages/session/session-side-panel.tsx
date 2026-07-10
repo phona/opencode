@@ -76,6 +76,7 @@ export function SessionSidePanel(props: {
   const shown = settings.visibility.fileTree
 
   const reviewOpen = createMemo(() => isDesktop() && view().reviewPanel.opened())
+  const questionsOpen = createMemo(() => isDesktop() && props.hasQuestions() && tabs().active() === "questions")
   const fileOpen = createMemo(
     () =>
       isDesktop() &&
@@ -84,12 +85,12 @@ export function SessionSidePanel(props: {
         opened: layout.fileTree.opened(),
       }),
   )
-  const open = createMemo(() => reviewOpen() || fileOpen())
+  const open = createMemo(() => reviewOpen() || fileOpen() || questionsOpen())
   const rendered = createMemo<boolean>((previous) => previous || open(), false)
   const reviewTab = createMemo(() => isDesktop())
   const panelWidth = createMemo(() => {
     if (!open()) return "0px"
-    if (reviewOpen()) return "auto"
+    if (reviewOpen() || questionsOpen()) return "auto"
     return `${layout.fileTree.width()}px`
   })
   const treeWidth = createMemo(() => (fileOpen() ? `${layout.fileTree.width()}px` : "0px"))
@@ -245,7 +246,7 @@ export function SessionSidePanel(props: {
           "transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none":
             !props.size.active() && !props.reviewSnap,
           "rounded-[10px] shadow-[var(--v2-elevation-raised)] overflow-hidden": settings.general.newLayoutDesigns(),
-          "flex-1": reviewOpen(),
+          "flex-1": reviewOpen() || questionsOpen(),
         }}
         style={{ width: panelWidth() }}
       >
@@ -257,11 +258,11 @@ export function SessionSidePanel(props: {
             }}
           >
             <div
-              aria-hidden={!reviewOpen()}
-              inert={!reviewOpen()}
+              aria-hidden={!(reviewOpen() || questionsOpen())}
+              inert={!(reviewOpen() || questionsOpen())}
               class="relative min-w-0 h-full flex-1 overflow-hidden bg-background-base"
               classList={{
-                "pointer-events-none": !reviewOpen(),
+                "pointer-events-none": !(reviewOpen() || questionsOpen()),
               }}
             >
               <div class="size-full min-w-0 h-full bg-background-base">

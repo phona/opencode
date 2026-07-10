@@ -71,11 +71,42 @@ Live View / Dynamic Island is intentionally out of scope because HarmonyOS NEXT 
 └─────────────────────────────────────────────────────────────┘
 ```
 
----
+## 6. Project Layout
 
-## 6. Components
+The HarmonyOS wrapper lives in its own package, parallel to `packages/desktop`, both consuming the same `packages/app` web frontend.
 
-### 6.1 ArkTS App Shell (`EntryAbility`)
+```
+packages/
+  app/                  # Core OpenCode frontend (SolidJS/Vite)
+  desktop/              # Electron wrapper around packages/app
+  harmonyos/            # HarmonyOS NEXT wrapper around packages/app  ← new
+  web/                  # Marketing/docs website
+```
+
+### Why a separate package?
+
+- `packages/app` remains platform-agnostic web code.
+- `packages/harmonyos` contains ArkTS/ArkUI-specific code, DevEco Studio configuration, and native bridge implementations.
+- The build pipeline copies `packages/app/dist` into `packages/harmonyos/entry/src/main/resources/rawfile/` before the HarmonyOS app is built.
+
+### Build pipeline
+
+```bash
+# 1. Build the web frontend
+cd packages/app
+bun run build
+
+# 2. Copy the build output into the HarmonyOS shell
+cp -r packages/app/dist/* packages/harmonyos/entry/src/main/resources/rawfile/
+
+# 3. Open packages/harmonyos in DevEco Studio and build/run
+```
+
+This mirrors the existing `packages/desktop` pattern, where the desktop shell packages the same web frontend inside a platform-specific runtime.
+
+## 7. Components
+
+### 7.1 ArkTS App Shell (`EntryAbility`)
 
 - Entry point of the app.
 - Creates a full-screen ArkWeb component.
@@ -83,14 +114,14 @@ Live View / Dynamic Island is intentionally out of scope because HarmonyOS NEXT 
 - Handles `UIAbility` lifecycle (`onForeground`, `onBackground`, `onWindowStageEvent`) and forwards foreground/background changes to the WebView.
 - Receives HMS Push intents and tells the WebView to navigate to the relevant session.
 
-### 6.2 ArkWeb WebView
+### 7.2 ArkWeb WebView
 
 - Loads the OpenCode frontend from `resources/rawfile/index.html` (fastest path) or from a sandbox path for dynamic updates.
 - Uses `javaScriptProxy()` to inject the native bridge.
 - Uses `createWebMessagePorts()` for optional high-throughput messaging.
 - DevTools can be enabled for debugging.
 
-### 6.3 JS Bridge (`window.opencodeNative`)
+### 7.3 JS Bridge (`window.opencodeNative`)
 
 A single namespaced object exposed to the web frontend. All methods are asynchronous and return Promises where needed.
 
@@ -107,14 +138,14 @@ A single namespaced object exposed to the web frontend. All methods are asynchro
 | `openSession(sessionID)` | Called from push click handler to focus a session. |
 | `onLifecycleChange(callback)` | Register a callback invoked when the app enters foreground or background. |
 
-### 6.4 Native Modules
+### 7.4 Native Modules
 
 - **NotificationKit**: Publish local text, multi-line, and progress notifications. Add `WantAgent` so tapping opens the app to the right session.
 - **CoreFileKit**: Sandbox file I/O, system pickers, file sharing via `startAbility` with grant flags.
 - **BackgroundTasksKit**: Request a transient task when moving to background so the app can gracefully finish the current SSE message or send a local notification before suspension.
 - **HMS Push SDK**: Register for push token, receive push messages, handle notification clicks.
 
-### 6.5 Backend HMS Push Integration (New)
+### 7.5 Backend HMS Push Integration (New)
 
 - Store per-device push tokens (HMS tokens) in the user's profile/session store.
 - When a new message or task event occurs for a user whose active client is the HarmonyOS app, call the Huawei Push Kit server API to send a push.
@@ -123,9 +154,9 @@ A single namespaced object exposed to the web frontend. All methods are asynchro
 
 ---
 
-## 7. JSBridge Protocol
+## 8. JSBridge Protocol
 
-### 7.1 Bridge Object
+### 8.1 Bridge Object
 
 ```ts
 // Web side (existing packages/app code)
@@ -147,7 +178,7 @@ interface OpenCodeNativeBridge {
 }
 ```
 
-### 7.2 ArkTS Registration
+### 8.2 ArkTS Registration
 
 ```ts
 import { webview } from '@kit.ArkWeb';
@@ -175,7 +206,7 @@ Web({ src: $rawfile('index.html'), controller: this.webviewController })
   })
 ```
 
-### 7.3 Lifecycle Messages
+### 8.3 Lifecycle Messages
 
 When the app transitions, the ArkTS shell calls into the web frontend:
 
@@ -189,7 +220,7 @@ The web frontend listens and pauses/resumes the SSE stream accordingly.
 
 ---
 
-## 8. Native Capability Mapping
+## 9. Native Capability Mapping
 
 | Feature | OpenHarmony API | Notes |
 |---------|-----------------|-------|
@@ -208,7 +239,7 @@ The web frontend listens and pauses/resumes the SSE stream accordingly.
 
 ---
 
-## 9. Permissions
+## 10. Permissions
 
 Declared in `module.json5`:
 
@@ -225,7 +256,7 @@ For HMS Push, the app also needs the Huawei Push Kit permission entries generate
 
 ---
 
-## 10. Development Phases
+## 11. Development Phases
 
 ### Phase 1: Minimal Native Shell (2–3 weeks)
 
@@ -253,7 +284,7 @@ For HMS Push, the app also needs the Huawei Push Kit permission entries generate
 
 ---
 
-## 11. Risks and Mitigation
+## 12. Risks and Mitigation
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
@@ -266,7 +297,7 @@ For HMS Push, the app also needs the Huawei Push Kit permission entries generate
 
 ---
 
-## 12. Open Questions
+## 13. Open Questions
 
 1. Is the user self-hosting OpenCode or using the official cloud service? This determines who implements the backend HMS Push sender.
 2. What is the exact HMS Push pricing and quota for the target account type? Must be verified in Huawei Developer Console.
@@ -275,6 +306,6 @@ For HMS Push, the app also needs the Huawei Push Kit permission entries generate
 
 ---
 
-## 13. Recommendation
+## 14. Recommendation
 
 Proceed with **Phase 1** immediately because it provides a usable app shell with notifications and system integration without backend changes. Begin **Phase 2** in parallel once the Huawei Push Kit account and credentials are ready. Defer Live View and full ArkUI rewrite until there is a clear business need.
