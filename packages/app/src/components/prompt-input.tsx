@@ -1310,6 +1310,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const touch = createMediaQuery("(hover: none)")
   const mobile = createMediaQuery("(max-width: 767px)")
+  const isDesktop = createMediaQuery("(min-width: 768px)")
 
   const { abort, handleSubmit } =
     props.submission ??
@@ -1747,11 +1748,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       </MenuV2.Portal>
                     </MenuV2>
                   </TooltipV2>
-                  <Show when={showAgentControl()}>
-                    <ComposerAgentControl state={agentControlState()} />
+                  <Show when={isDesktop()}>
+                    <Show when={showAgentControl()}>
+                      <ComposerAgentControl state={agentControlState()} />
+                    </Show>
+                    <ComposerModelControl state={modelControlState()} />
                   </Show>
                   {props.toolbar}
-                  <ComposerModelControl state={modelControlState()} />
                   <Show when={!providersLoading() && store.mode !== "shell" && showVariantControl()}>
                     <div
                       data-component="prompt-variant-control"
