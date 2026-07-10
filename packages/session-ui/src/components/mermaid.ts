@@ -1,3 +1,5 @@
+import DOMPurify from "dompurify"
+
 // Lazy loading & initialization
 
 let mermaidPromise: Promise<typeof import("mermaid")["default"]> | null = null
@@ -273,7 +275,7 @@ export async function renderMermaidDiagrams(container: HTMLElement) {
         renderedCache.set(cacheKey, svgStr)
       }
 
-      transformEl.innerHTML = svgStr
+      transformEl.innerHTML = DOMPurify.sanitize(svgStr, { USE_PROFILES: { svg: true, svgFilters: true } })
       viewport.appendChild(transformEl)
       placeholder.appendChild(viewport)
       placeholder.appendChild(controls)
