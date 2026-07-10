@@ -6,6 +6,8 @@
   "license": "MIT",
   "exports": {
     "./*": "./src/components/*.tsx",
+    "./mermaid": "./src/components/mermaid.ts",
+    "./mermaid.css": "./src/components/mermaid.css",
     "./session-diff": "./src/components/session-diff.ts",
     "./message-file": "./src/components/message-file.ts",
     "./message-part-text": "./src/components/message-part-text.ts",
