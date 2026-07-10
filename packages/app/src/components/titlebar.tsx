@@ -490,9 +490,6 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
               if (!sessionData) return
 
               const [store, setStore] = ctx.sync.child(sessionData.directory)
-              const sessions = store.session ?? []
-              const index = sessions.findIndex((s) => s.id === id)
-              const nextSession = index === -1 ? undefined : (sessions[index + 1] ?? sessions[index - 1])
 
               await ctx.sdk.client.session
                 .update({ sessionID: id, time: { archived: Date.now() } })
@@ -538,9 +535,6 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
               if (!sessionData) return
 
               const [store, setStore] = ctx.sync.child(sessionData.directory)
-              const sessions = (store.session ?? []).filter((s) => !s.parentID && !s.time?.archived)
-              const index = sessions.findIndex((s) => s.id === sessionID)
-              const nextSession = index === -1 ? undefined : (sessions[index + 1] ?? sessions[index - 1])
 
               const result = await ctx.sdk.client.session
                 .delete({ sessionID })
@@ -609,7 +603,7 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                     />
                     <button
                       type="button"
-                      class="flex-1 truncate text-center text-[13px] leading-4 font-medium text-text-base"
+                      class="flex-1 truncate text-center text-13-medium text-v2-text-text-base"
                       onClick={() => {
                         const id = mobileSessionId()
                         if (!id) return
@@ -663,14 +657,14 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
                     <div class="flex items-center gap-1">
                       <IconButtonV2
                         variant="ghost-muted"
-                        icon={<IconV2 name="review" />}
+                        icon={<IconV2 name="square-on-square" />}
                         onClick={mobileShell.openChanges}
-                        aria-label={language.t("session.tab.review")}
+                        aria-label={language.t("session.review.title")}
                       />
                       <MenuV2 gutter={6} placement="bottom-end" modal={false}>
                         <MenuV2.Trigger
                           as={IconButtonV2}
-                          icon={<IconV2 name="outline-dots" />}
+                          icon={<IconV2 name="ellipsis" />}
                           variant="ghost-muted"
                           aria-label={language.t("common.moreOptions")}
                         />
