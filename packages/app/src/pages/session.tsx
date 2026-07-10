@@ -89,6 +89,10 @@ import { legacySessionHref, requireServerKey, sessionHref } from "@/utils/sessio
 import { useUsageExceededDialogs } from "./session/usage-exceeded-dialogs"
 import { createSessionOwnership } from "./session/session-ownership"
 import { createSessionLineage } from "./session/session-lineage"
+import { MobileDrawer } from "@/components/mobile-drawer"
+import { useMobileShell } from "@/components/mobile-shell"
+import { NewHome } from "@/pages/home"
+import { createSwipeGesture } from "@/utils/swipe-gesture"
 
 type FollowupItem = FollowupDraft & { id: string }
 type FollowupEdit = Pick<FollowupItem, "id" | "prompt" | "context">
@@ -303,23 +307,30 @@ function SessionProviders(props: ParentProps) {
   )
 }
 
-function SessionRouteFrame(props: ParentProps<{ padded?: boolean }>) {
+function SessionRouteFrame(
+  props: ParentProps<{ padded?: boolean; onRef?: (el: HTMLDivElement) => void }>,
+) {
   return (
-    <div class="relative size-full overflow-hidden flex flex-col" classList={{ "p-2": props.padded }}>
+    <div
+      ref={props.onRef}
+      class="relative size-full overflow-hidden flex flex-col"
+      classList={{ "p-2": props.padded }}
+    >
       {props.children}
     </div>
   )
 }
 
 function SessionPanelFrame(props: ParentProps<{ newLayout: boolean; raised?: boolean }>) {
+  const isDesktop = createMediaQuery("(min-width: 768px)")
   return (
     <div
       classList={{
         "flex-1 min-h-0 flex flex-col": true,
         "bg-v2-background-bg-base": props.newLayout,
         "bg-background-stronger": !props.newLayout,
-        "rounded-[10px] overflow-hidden": props.newLayout,
-        "shadow-[var(--v2-elevation-raised)]": props.newLayout && props.raised,
+        "rounded-[10px] overflow-hidden": props.newLayout && isDesktop(),
+        "shadow-[var(--v2-elevation-raised)]": props.newLayout && props.raised && isDesktop(),
       }}
     >
       {props.children}
@@ -349,6 +360,7 @@ export default function Page() {
   const { params, sessionKey, workspaceKey, tabs, view } = useSessionLayout()
   const sessionOwnership = createSessionOwnership(sessionKey)
   const newSessionDesign = createMemo(() => settings.general.newLayoutDesigns())
+  const mobileShell = useMobileShell()
 
   createEffect(() => {
     if (!prompt.ready()) return
@@ -1995,7 +2007,7 @@ export default function Page() {
 
   const sessionPanelContent = () => (
     <>
-      <Show when={!isDesktop() && !!params.id && settings.general.newLayoutDesigns() && !mobileTabsBottom()}>
+      <Show when={!isDesktop() && !!params.id && !settings.general.newLayoutDesigns()}>
         {mobileTabs(true)}
       </Show>
       <div class="flex-1 min-h-0 overflow-hidden">
@@ -2063,7 +2075,7 @@ export default function Page() {
       </div>
 
       <Show when={(params.id || !newSessionDesign()) && !mobileChanges()}>{(_) => composerRegion()}</Show>
-      <Show when={!!params.id && mobileTabsBottom()}>{mobileTabs(true, true)}</Show>
+      <Show when={!!params.id && !isDesktop() && !settings.general.newLayoutDesigns() && settings.general.mobileTitlebarPosition() === "bottom"}>{mobileTabs(true, true)}</Show>
     </>
   )
 
@@ -2081,13 +2093,36 @@ export default function Page() {
     scrollToMessage(message)
   }
 
+  let frameRef: HTMLDivElement | undefined
+
+  onMount(() => {
+    if (!frameRef || isDesktop()) return
+    createSwipeGesture(frameRef, {
+      edgeWidth: 20,
+      threshold: 60,
+      velocity: 0.3,
+      onSwipeRight: mobileShell.openHome,
+      onSwipeLeft: mobileShell.openChanges,
+    })
+  })
+
   return (
-    <SessionRouteFrame>
+    <SessionRouteFrame onRef={(el) => { frameRef = el }}>
+      <Show when={!isDesktop() && settings.general.newLayoutDesigns()}>
+        <MobileDrawer side="left" open={mobileShell.isHomeOpen} onClose={mobileShell.closeHome}>
+          <NewHome />
+        </MobileDrawer>
+        <MobileDrawer side="right" open={mobileShell.isChangesOpen} onClose={mobileShell.closeChanges}>
+          <div class="h-full flex flex-col">
+            {reviewPanelV2()}
+          </div>
+        </MobileDrawer>
+      </Show>
       <SessionHeader />
       <div
         class="flex-1 min-h-0 flex flex-col md:flex-row"
         classList={{
-          "gap-2 p-2": settings.general.newLayoutDesigns(),
+          "gap-2 p-2": settings.general.newLayoutDesigns() && isDesktop(),
         }}
       >
         <Show when={!isDesktop() && !!params.id && !settings.general.newLayoutDesigns()}>{mobileTabs()}</Show>
@@ -2116,7 +2151,7 @@ export default function Page() {
             </SessionPanelFrame>
           )}
 
-          <Show when={desktopSessionResizeOpen()}>
+          <Show when={isDesktop() && desktopSessionResizeOpen()}>
             <div onPointerDown={() => size.start()}>
               <ResizeHandle
                 classList={{
