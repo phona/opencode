@@ -691,6 +691,9 @@ export const dict = {
   "session.header.open.ariaLabel": "Abrir en {{app}}",
   "session.header.open.menu": "Opciones de apertura",
   "session.header.open.copyPath": "Copiar ruta",
+  "session.header.reveal.finder": "",
+  "session.header.reveal.fileExplorer": "",
+  "session.header.reveal.containingFolder": "",
 
   "status.popover.trigger": "Estado",
   "status.popover.ariaLabel": "Configuraciones del servidor",

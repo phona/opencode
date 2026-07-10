@@ -690,6 +690,9 @@ export const dict = {
   "session.header.open.ariaLabel": "Otvori u {{app}}",
   "session.header.open.menu": "Opcije otvaranja",
   "session.header.open.copyPath": "Kopiraj putanju",
+  "session.header.reveal.finder": "",
+  "session.header.reveal.fileExplorer": "",
+  "session.header.reveal.containingFolder": "",
 
   "status.popover.trigger": "Status",
   "status.popover.ariaLabel": "Konfiguracije servera",

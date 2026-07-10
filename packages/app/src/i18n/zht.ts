@@ -678,6 +678,9 @@ export const dict = {
   "session.header.open.ariaLabel": "在 {{app}} 中開啟",
   "session.header.open.menu": "開啟選項",
   "session.header.open.copyPath": "複製路徑",
+  "session.header.reveal.finder": "",
+  "session.header.reveal.fileExplorer": "",
+  "session.header.reveal.containingFolder": "",
 
   "status.popover.trigger": "狀態",
   "status.popover.ariaLabel": "伺服器設定",

@@ -684,6 +684,9 @@ export const dict = {
   "session.header.open.ariaLabel": "เปิดใน {{app}}",
   "session.header.open.menu": "ตัวเลือกการเปิด",
   "session.header.open.copyPath": "คัดลอกเส้นทาง",
+  "session.header.reveal.finder": "",
+  "session.header.reveal.fileExplorer": "",
+  "session.header.reveal.containingFolder": "",
 
   "status.popover.trigger": "สถานะ",
   "status.popover.ariaLabel": "การกำหนดค่าเซิร์ฟเวอร์",
